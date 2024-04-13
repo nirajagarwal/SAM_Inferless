@@ -4,7 +4,6 @@ from PIL import Image
 import requests
 import torch
 import numpy as np
-from PIL import Image
 import base64
 from io import BytesIO
 
@@ -46,6 +45,17 @@ class InferlessPythonModel:
       return img_str.decode('utf-8')
 
   def infer(self,inputs):
+      img_url = inputs["image_url"]
+      raw_image = Image.open(requests.get(img_url, stream=True).raw).convert("RGB")
+      inputs = self.processor(raw_image, return_tensors="pt").to(self.device)
+      inputs = self.processor(raw_image, return_tensors="pt").to(self.device)
+      with torch.no_grad():
+          outputs = self.model(**inputs)
+      masks = self.processor.image_processor.post_process_masks(outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu())
+      image_data = self.process_image(masks,raw_image)
+      return {"generated_image_base64": image_data}
+
+  def infer_orig(self,inputs):
       input_points = [[inputs["input_points"]]]
       img_url = inputs["image_url"]
       raw_image = Image.open(requests.get(img_url, stream=True).raw).convert("RGB")
